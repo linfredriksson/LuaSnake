@@ -1,13 +1,20 @@
+--e = love.filesystem.exists("highscorea.lua") -- probably best to check if it exists
+
 function love.load()
-  love.window.setMode(600, 400)
   posY = love.graphics:getHeight() * 0.5
   posX = love.graphics:getWidth() * 0.5
   timer = 0
   direction = "right"
   enterText = false
   inputText = ""
+  highscore = {}
+  loadHighscore()
   snake = {}
   setupSnake(4)
+end
+
+function compare(a, b)
+  return a.score > b.score
 end
 
 function setupSnake(l)
@@ -18,6 +25,34 @@ function setupSnake(l)
   end
 end
 
+function saveHighscore()
+  table.insert(highscore, {name = inputText, score = math.random(100)})
+  table.sort(highscore, compare)
+  
+  while #highscore > 10 do table.remove(highscore) end
+  
+  saveString = "local highscore = {\n"
+  
+  for i = 1, #highscore do
+    saveString = saveString .. "\t{name = \""
+    saveString = saveString .. highscore[i].name
+    saveString = saveString .. "\", score = "
+    saveString = saveString .. highscore[i].score
+    saveString = saveString .. "}"
+    if i ~= #highscore then saveString = saveString .. ",\n" end
+  end
+  
+  saveString = saveString .. "\n}\nreturn highscore"
+  
+  love.filesystem.write( "highscore.lua", saveString)
+end
+
+function loadHighscore()
+  --if love.filesystem.exists("highscorea.lua") then -- check if this actually works
+  highscore = love.filesystem.load("highscore.lua")()
+  --end
+end
+
 function love.textinput(t)
   if enterText then inputText = inputText .. t end
 end
@@ -26,6 +61,8 @@ function love.keypressed(key)
   if key == "escape" then love.event.quit() end
   if key == "return" then enterText =  not enterText end
   if key == "backspace" then inputText = string.sub(inputText, 1, -2) end
+  
+  if not enterText and key == "k" then saveHighscore() end
   
   if not enterText then
     if key == "w" and direction ~= "down" then direction = "up" end
@@ -64,6 +101,12 @@ end
 function love.draw()
   love.graphics.print("Input text: " .. inputText, 10, 10)
   love.graphics.print("Snake length: " .. #snake, 10, 30)
+  
+  love.graphics.print("Highscore length: " .. #highscore, 150, 10)
+  for i = 1, #highscore do
+    love.graphics.print(highscore[i].score, 150, 20 + i * 10)
+    love.graphics.print(highscore[i].name, 170, 20 + i * 10)
+  end
   
   for i = 1, #snake do
     love.graphics.print(snake[i].x, 10, 40 + i * 10)
