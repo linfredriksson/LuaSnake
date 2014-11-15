@@ -6,20 +6,15 @@ function love.load()
   direction = "right"
   enterText = false
   inputText = ""
-  snakeX = {}
-  snakeY = {}
+  snake = {}
   setupSnake(4)
 end
 
 function setupSnake(l)
-  snakeX = {}
-  snakeY = {}
-  
+  snake = {}
   if l == nil then l = 1 end
-  
   for i = 1, l do
-    table.insert(snakeX, 100 - i * 10)
-    table.insert(snakeY, 100)
+    table.insert(snake, {x = 100 - i * 10, y = 100})
   end
 end
 
@@ -37,22 +32,6 @@ function love.keypressed(key)
     if key == "s" and direction ~= "up" then direction = "down" end
     if key == "a" and direction ~= "right" then direction = "left" end
     if key == "d" and direction ~= "left" then direction = "right" end
-    --[[if key == "w" or key == "s" or key == "a" or key == "d" then
-      local x = snakeX[1]
-      local y = snakeY[1]
-      
-      table.remove(snakeX)
-      table.remove(snakeY)
-      
-      if key == "w" then y = y - 10 end
-      if key == "s" then y = y + 10 end
-      if key == "a" then x = x - 10 end
-      if key == "d" then x = x + 10 end
-      
-      table.insert(snakeX, 1, x)
-      table.insert(snakeY, 1, y)
-
-      end--]]
   end
 end
 
@@ -62,43 +41,33 @@ end
 function love.update(dt)
   timer = timer + dt
   if not enterText then
-    if love.keyboard.isDown("up") then posY = posY - 100 * dt end
-    if love.keyboard.isDown("down") then posY = posY + 100 * dt end
-    if love.keyboard.isDown("right") then posX = posX + 100 * dt end
-    if love.keyboard.isDown("left") then posX = posX - 100 * dt end
-    
-    if timer > 0.2 then
-      timer = 0
-      local x = snakeX[1]
-      local y = snakeY[1]
-      table.remove(snakeX)
-      table.remove(snakeY)
-      if direction == "up" then y = y - 10 end
-      if direction == "down" then y = y + 10 end
-      if direction == "left" then x = x - 10 end
-      if direction == "right" then x = x + 10 end
-      table.insert(snakeX, 1, x)
-      table.insert(snakeY, 1, y)
+    if timer > 0.1 then
+      timer = timer - 0.1
+      
+      local pos = {x = snake[1].x, y = snake[1].y}
+      table.remove(snake)
+      if direction == "up" then pos.y = pos.y - 10 end
+      if direction == "down" then pos.y = pos.y + 10 end
+      if direction == "left" then pos.x = pos.x - 10 end
+      if direction == "right" then pos.x = pos.x + 10 end
+      table.insert(snake, 1, pos)
       
       -- keep snake in the window
-      if x <= 10 then direction = "right" end
-      if x >= love.graphics:getWidth() - 20 then direction = "left" end
-      if y <= 10 then direction = "down" end
-      if y >= love.graphics:getHeight() - 20 then direction = "up" end
+      if pos.x <= 10 then direction = "right" end
+      if pos.x >= love.graphics:getWidth() - 20 then direction = "left" end
+      if pos.y <= 10 then direction = "down" end
+      if pos.y >= love.graphics:getHeight() - 20 then direction = "up" end
     end
   end
 end
 
 function love.draw()
-  love.graphics.rectangle("fill", posX, posY, 32, 32)
-  love.graphics.print('Hello World!', posX, posY)
-  love.graphics.print(inputText, 20, 20)
-  love.graphics.print("Snake length: " .. #snakeX, 20, 40)
-
-  for i = 1, #snakeX do
-    love.graphics.print(snakeX[i], 20, 50 + i * 10)
-    love.graphics.print(snakeY[i], 50, 50 + i * 10)
-    
-    love.graphics.rectangle("fill", snakeX[i], snakeY[i], 10, 10)
+  love.graphics.print("Input text: " .. inputText, 10, 10)
+  love.graphics.print("Snake length: " .. #snake, 10, 30)
+  
+  for i = 1, #snake do
+    love.graphics.print(snake[i].x, 10, 40 + i * 10)
+    love.graphics.print(snake[i].y, 40, 40 + i * 10)
+    love.graphics.rectangle("fill", snake[i].x, snake[i].y, 10, 10)
   end
 end
