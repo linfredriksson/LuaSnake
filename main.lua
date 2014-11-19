@@ -25,17 +25,27 @@ function love.load()
   
   -- initiate snakes
   snake = {
-    {color = {255, 0, 0}, body = {}, start = {x = 20, y = 13}, keys = {"w", "s", "a", "d"}, score = 0, direction = {x = 1, y = 0}},
-    {color = {0, 255, 0}, body = {}, start = {x = 38, y = 13}, keys = {"i", "k", "j", "l"}, score = 0, direction = {x = -1, y = 0}}
+    {color = {255, 0, 0}, start = {x = 20, y = 13}, startDirection = {x = 1, y = 0}, keys = {"w", "s", "a", "d"}, score = 0, body = {}, direction = {}, alive = true},
+    {color = {0, 255, 0}, start = {x = 38, y = 13}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, alive = true}
   }
-  for i = 1, #snake do setupSnake(snake[i], defaultLength) end
+  
+  initiateWorld()
+end
 
-  -- initiate apples
+--[[
+  Initiate snakes and apples before starting a new game
+]]--
+function initiateWorld()
+  for i = 1, #snake do
+    setupSnake(snake[i], defaultLength)
+  end
+
   apples = {}
   generateApples(5)
 end
 
 --[[
+  Save highscore list to file
 ]]--
 function love.quit()
   saveString = "local highscore = {\n"
@@ -64,7 +74,9 @@ function generateApples(n)
   local i = 0
   
   -- REVISIT!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-  for i = 1, n do    
+  for i = 1, n do
+    -- give it 20 tries to find a empty spot before
+    -- taking whatever position is current
     while i < 20 do
       i = i + 1
       pos = {
@@ -74,16 +86,13 @@ function generateApples(n)
       
       for j = 1, #snake do
         for k = 1, #snake[j].body do
-          if equal(pos, snake[j].body[k]) then
-            occupied = true
-          end
+          if equal(pos, snake[j].body[k]) then occupied = true end
           if occupied then break end
         end
         if occupied then break end
       end
       
       if not occupied then break end
-      --break
     end
     
     table.insert(apples, pos)
@@ -93,19 +102,26 @@ end
 --[[
   Helper function used to compare two positions
 ]]--
-function equal(a, b) return a.x == b.x and a.y == b.y end
+function equal(a, b)
+  return a.x == b.x and a.y == b.y
+end
 
 --[[
   Helper function used when sorting the high score table
 ]]--
-function compare(a, b) return a.score > b.score end
+function compare(a, b)
+  return a.score > b.score
+end
 
 --[[
   Initiate a snake by creating its body
 ]]--
 function setupSnake(snake, l)
   snake.body = {}
-  if l == nil or l == 0 then l = 1 end
+  if l == nil or l == 0 then l = 1 end  
+  
+  snake.alive = true
+  snake.direction = snake.startDirection
   
   for i = 1, l do
     table.insert(snake.body, {
@@ -151,6 +167,7 @@ function love.keypressed(key)
   if key == "return" then
     gameIsRunning = not gameIsRunning
     timer = 0
+    if gameIsRunning then initiateWorld() end
   end
   
   if key == "t" then enterText =  not enterText end
@@ -180,26 +197,42 @@ function love.update(dt)
         pos.x = pos.x + snake[i].direction.x
         pos.y = pos.y + snake[i].direction.y
         
-        local hit = false
+        -- check to see if snake eats a apple
         for j = 1, #apples do
           if equal(snake[i].body[1], apples[j]) then
             table.insert(snake[i].body, 1, apples[j])
             table.remove(apples, j)
             generateApples(1)
-            hit = true
-            do break end
+            break
           end
         end
         
-        --if not hit then
-          table.remove(snake[i].body)
-          table.insert(snake[i].body, 1, pos)
-        --end
+        -- move the snake forwards one step
+        table.remove(snake[i].body)
+        table.insert(snake[i].body, 1, pos)
         
-        if pos.x <= 1 then snake[i].direction = {x = 1, y = 0} end
-        if pos.x >= worldWidth then snake[i].direction = {x = -1, y = 0} end
-        if pos.y <= 1 then snake[i].direction = {x = 0, y = 1} end
-        if pos.y >= worldHeight then snake[i].direction = {x = 0, y = -1} end
+        -- check if snake hits any walls
+        if pos.x <= 1 or pos.x >= worldWidth or pos.y <= 1 or pos.y >= worldHeight then
+          snake[i].alive = false
+        end
+        
+        -- check if snake hits any part of any snake
+        for j = 1, #snake do
+          for k = 1, #snake[j].body do
+            -- no intersection with snakes own head
+            if equal(pos, snake[j].body[k]) and not (i == j and k == 1) then
+              snake[i].alive = false
+              break
+            end
+          end
+        end
+      end
+      
+      -- if any snake hits anything set alive to false and pause game
+      for i = 1, #snake do
+        if snake[i].alive == false then
+          gameIsRunning = false
+        end
       end
     end
   end
@@ -224,7 +257,13 @@ function love.draw()
   --  love.graphics.print(highscore[i].score, love.graphics:getWidth()-170, i * 10)
   --  love.graphics.print(highscore[i].name, love.graphics:getWidth()-150, i * 10)
   --end
-    
+  
+  -- render apples
+  for i = 1, #apples do
+    love.graphics.setColor(200, 55, 55)
+    love.graphics.rectangle("fill", apples[i].x * 10, 100 + apples[i].y * 10, 10, 10)
+  end
+  
   -- render snakes
   for i = 1, #snake do
     love.graphics.setColor(snake[i].color)
@@ -239,11 +278,5 @@ function love.draw()
         100 + snake[i].body[j].y * 10,
         10, 10)
     end
-  end
-  
-  -- render apples
-  for i = 1, #apples do
-    love.graphics.setColor(200, 55, 55)
-    love.graphics.rectangle("fill", apples[i].x * 10, 100 + apples[i].y * 10, 10, 10)
   end
 end
