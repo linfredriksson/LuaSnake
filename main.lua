@@ -25,8 +25,8 @@ function love.load()
   
   -- initiate snakes
   snake = {
-    {color = {255, 0, 0}, start = {x = 20, y = 13}, startDirection = {x = 1, y = 0}, keys = {"w", "s", "a", "d"}, score = 0, body = {}, direction = {}, alive = true},
-    {color = {0, 255, 0}, start = {x = 38, y = 13}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, alive = true}
+    {color = {255, 0, 0}, start = {x = 20, y = 13}, startDirection = {x = 1, y = 0}, keys = {"w", "s", "a", "d"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
+    --{color = {0, 255, 0}, start = {x = 38, y = 13}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, alive = true}
   }
   
   initiateWorld()
@@ -122,6 +122,7 @@ function setupSnake(snake, l)
   
   snake.alive = true
   snake.direction = snake.startDirection
+  snake.tmpDirection = snake.startDirection
   
   for i = 1, l do
     table.insert(snake.body, {
@@ -175,10 +176,10 @@ function love.keypressed(key)
   
   if not enterText and gameIsRunning then
     for i = 1, #snake do
-      if key == snake[i].keys[1] and snake[i].direction.y ~= 1 then snake[i].direction = {x = 0, y = -1} end
-      if key == snake[i].keys[2] and snake[i].direction.y ~= -1 then snake[i].direction = {x = 0, y = 1} end
-      if key == snake[i].keys[3] and snake[i].direction.x ~= 1 then snake[i].direction = {x = -1, y = 0} end
-      if key == snake[i].keys[4] and snake[i].direction.x ~= -1 then snake[i].direction = {x = 1, y = 0} end
+      if key == snake[i].keys[1] and snake[i].direction.y ~= 1 then snake[i].tmpDirection = {x = 0, y = -1} end
+      if key == snake[i].keys[2] and snake[i].direction.y ~= -1 then snake[i].tmpDirection = {x = 0, y = 1} end
+      if key == snake[i].keys[3] and snake[i].direction.x ~= 1 then snake[i].tmpDirection = {x = -1, y = 0} end
+      if key == snake[i].keys[4] and snake[i].direction.x ~= -1 then snake[i].tmpDirection = {x = 1, y = 0} end
     end
   end
 end
@@ -193,6 +194,9 @@ function love.update(dt)
       timer = timer - 0.1
       
       for i = 1, #snake do
+        -- prevents turning to fast and go back inside the snake itself
+        snake[i].direction = snake[i].tmpDirection
+        
         local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
         pos.x = pos.x + snake[i].direction.x
         pos.y = pos.y + snake[i].direction.y
@@ -212,7 +216,7 @@ function love.update(dt)
         table.insert(snake[i].body, 1, pos)
         
         -- check if snake hits any walls
-        if pos.x <= 1 or pos.x >= worldWidth or pos.y <= 1 or pos.y >= worldHeight then
+        if pos.x < 1 or pos.x > worldWidth or pos.y < 1 or pos.y > worldHeight then
           snake[i].alive = false
         end
         
