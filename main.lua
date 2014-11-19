@@ -121,7 +121,9 @@ function setupSnake(snake, l)
   if l == nil or l == 0 then l = 1 end  
   
   snake.alive = true
-  snake.direction = snake.startDirection
+  snake.direction = snake.startDirection  
+  -- tmpDirection prevents turning to fast creating a 180 degree
+  -- turn where the snake can go back inside itself
   snake.tmpDirection = snake.startDirection
   
   for i = 1, l do
@@ -194,7 +196,6 @@ function love.update(dt)
       timer = timer - 0.1
       
       for i = 1, #snake do
-        -- prevents turning to fast and go back inside the snake itself
         snake[i].direction = snake[i].tmpDirection
         
         local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
