@@ -2,15 +2,19 @@
 ]]--
 function love.load()
   -- setup world colors
-  wallColor = {0, 0, 0}
+  wallColor = {30, 30, 30}
   backgroundColor = {255, 255, 255}
   love.graphics.setBackgroundColor(backgroundColor)
+  love.graphics.setFont(love.graphics.newFont("Square One.ttf", 14))
   
   -- set random seed to prevent apples from always
   -- starting at the same positions
   math.randomseed(os.time())
   
   -- global variables
+  showHighscore = false
+  showControls = false
+  result = -1
   gameIsRunning = false
   timer = 0
   enterText = false
@@ -18,25 +22,41 @@ function love.load()
   defaultLength = 5
   worldHeight = 28
   worldWidth = 58
+  offset = 40
+  activeSnakes = 0
   
-  -- setup highscore table
+  -- setup high score table
   highscore = {}
   loadHighscore()
   
+  -- initiate apples
+  apples = {}
+  
   -- initiate snakes
   snake = {
-    {color = {255, 0, 0}, start = {x = 20, y = 13}, startDirection = {x = 1, y = 0}, keys = {"w", "s", "a", "d"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
-    --{color = {0, 255, 0}, start = {x = 38, y = 13}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, alive = true}
+    {color = {255, 10, 10}, start = {x = 20, y = 18}, startDirection = {x = 1, y = 0}, keys = {"w", "s", "a", "d"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
+    {color = {10, 255, 10}, start = {x = 38, y = 10}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
+    {color = {10, 10, 255}, start = {x = 38, y = 18}, startDirection = {x =-1, y = 0}, keys = {"t", "g", "f", "h"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
+    {color = {255, 155, 100}, start = {x = 20, y = 10}, startDirection = {x =1, y = 0}, keys = {"up", "down", "left", "right"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true}
   }
   
-  initiateWorld()
+  -- initiate menu buttons
+  buttons = {
+    {title = "highscore", pos = {x = 14, y = 14 + 26 * 0}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "controls", pos = {x = 14, y = 14 + 26 * 1}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "1  player", pos = {x = 14, y = 14 + 26 * 2}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "2 player", pos = {x = 14, y = 14 + 26 * 3}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "3 player", pos = {x = 14, y = 14 + 26 * 4}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "4 player", pos = {x = 14, y = 14 + 26 * 5}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "quit", pos = {x = 14, y = 14 + 26 * 6}, size = {x = 160, y = 22}, hover = false, pushed = false}
+  }
 end
 
 --[[
   Initiate snakes and apples before starting a new game
 ]]--
 function initiateWorld()
-  for i = 1, #snake do
+  for i = 1, activeSnakes do
     setupSnake(snake[i], defaultLength)
   end
 
@@ -48,27 +68,21 @@ end
   Save highscore list to file
 ]]--
 function love.quit()
-  saveString = "local highscore = {\n"
+  local s = "local highscore = {\n"
   
   for i = 1, #highscore do
-    saveString = saveString .. "\t{name = \""
-    saveString = saveString .. highscore[i].name
-    saveString = saveString .. "\", score = "
-    saveString = saveString .. highscore[i].score
-    saveString = saveString .. "}"
-    if i ~= #highscore then saveString = saveString .. ",\n" end
+    s = s.."\t{name = \""..highscore[i].name.."\", score = "..highscore[i].score.."}"
+    if i ~= #highscore then s = s .. ",\n" end
   end
   
-  saveString = saveString .. "\n}\nreturn highscore"
+  s = s .. "\n}\nreturn highscore"
 
-  -- save savefile string to file
-  love.filesystem.write( "highscore.lua", saveString)
+  love.filesystem.write( "highscore.lua", s)
 end
 
 --[[
 ]]--
 function generateApples(n)
-  n = n or 1
   local occupied = false
   local pos = {x = 0, y = 0}
   local i = 0
@@ -84,7 +98,7 @@ function generateApples(n)
         y = math.random(worldHeight)
       }
       
-      for j = 1, #snake do
+      for j = 1, activeSnakes do
         for k = 1, #snake[j].body do
           if equal(pos, snake[j].body[k]) then occupied = true end
           if occupied then break end
@@ -167,15 +181,17 @@ end
 function love.keypressed(key)
   if key == "escape" then love.event.quit() end
   if key == "backspace" then inputText = string.sub(inputText, 1, -2) end
-  if key == "return" then
+
+  -- pause game
+  if key == "p" then
     gameIsRunning = not gameIsRunning
     timer = 0
-    if gameIsRunning then initiateWorld() end
   end
-  
-  if key == "t" then enterText =  not enterText end
-  if not enterText and key == "g" then saveHighscore() end
-  
+
+  --if key == "t" then enterText =  not enterText end
+  --if not enterText and key == "g" then saveHighscore() end
+
+  -- user input for controlling the snake
   if not enterText and gameIsRunning then
     for i = 1, #snake do
       if key == snake[i].keys[1] and snake[i].direction.y ~= 1 then snake[i].tmpDirection = {x = 0, y = -1} end
@@ -186,18 +202,73 @@ function love.keypressed(key)
   end
 end
 
+function love.mousereleased( x, y, button )
+  if not gameIsRunning then
+    y = y - offset
+    
+    for i = 1, #buttons do
+      if x > buttons[i].pos.x and x < buttons[i].pos.x + buttons[i].size.x and y > buttons[i].pos.y and y < buttons[i].pos.y + buttons[i].size.y then
+        if i == 1 then
+          result = -1
+          showHighscore = true
+          showControls = false
+        elseif i == 2 then
+          result = -1
+          showHighscore = false
+          showControls = true
+        elseif i == 3 or i == 4 or i == 5 or i == 6 then
+          result = -1
+          showHighscore = false
+          showControls = false
+          gameIsRunning = true
+          activeSnakes = i - 2
+          initiateWorld()
+          timer = 0
+        else
+          love.event.quit()
+        end
+      end
+    end
+  end
+end
+
 --[[
   Main game loop, updates the game progression
 ]]--
 function love.update(dt)
   timer = timer + dt
+  
+  if not gameIsRunning then
+    local x, y = love.mouse.getPosition()
+    y = y - offset
+    
+    for i = 1, #buttons do
+      if x > buttons[i].pos.x and x < buttons[i].pos.x + buttons[i].size.x and y > buttons[i].pos.y and y < buttons[i].pos.y + buttons[i].size.y then
+        if love.mouse.isDown("l") then
+          buttons[i].pushed = true
+        else
+          buttons[i].hover = true
+          buttons[i].pushed = false
+        end
+      else
+        buttons[i].hover = false
+        buttons[i].pushed = false
+      end
+    end
+  end
+  
   if not enterText and gameIsRunning then
     if timer > 0.1 then
       timer = timer - 0.1
       
-      for i = 1, #snake do
+      -- update snake positions
+      for i = 1, activeSnakes do
+        -- dont update dead snakes
+        if snake[i].alive == false then goto continue end
+        
         snake[i].direction = snake[i].tmpDirection
         
+        -- find new position
         local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
         pos.x = pos.x + snake[i].direction.x
         pos.y = pos.y + snake[i].direction.y
@@ -208,6 +279,7 @@ function love.update(dt)
             table.insert(snake[i].body, 1, apples[j])
             table.remove(apples, j)
             generateApples(1)
+            snake[i].score = snake[i].score + 1
             break
           end
         end
@@ -216,13 +288,20 @@ function love.update(dt)
         table.remove(snake[i].body)
         table.insert(snake[i].body, 1, pos)
         
+        ::continue::
+      end
+      
+      -- check for collisions
+      for i = 1, activeSnakes do
+        local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
+        
         -- check if snake hits any walls
         if pos.x < 1 or pos.x > worldWidth or pos.y < 1 or pos.y > worldHeight then
           snake[i].alive = false
         end
         
         -- check if snake hits any part of any snake
-        for j = 1, #snake do
+        for j = 1, activeSnakes do
           for k = 1, #snake[j].body do
             -- no intersection with snakes own head
             if equal(pos, snake[j].body[k]) and not (i == j and k == 1) then
@@ -233,10 +312,29 @@ function love.update(dt)
         end
       end
       
-      -- if any snake hits anything set alive to false and pause game
-      for i = 1, #snake do
-        if snake[i].alive == false then
-          gameIsRunning = false
+      -- find the result of the game
+      local count = 0
+      for i = 1, activeSnakes do
+        if snake[i].alive == true then count = count + 1 end
+      end
+      
+      -- single player
+      if activeSnakes == 1 and count == 0 then
+        gameIsRunning = false
+        result = 1
+      end
+      
+      -- multiplayer with no surviving snakes
+      if activeSnakes > 1 and count == 0 then
+        gameIsRunning = false
+        result = 0
+      end
+      
+      -- multiplayer with one surviving snake
+      if activeSnakes > 1 and count == 1 then
+        gameIsRunning = false
+        for i = 1, activeSnakes do
+          if snake[i].alive then result = i end
         end
       end
     end
@@ -249,39 +347,121 @@ end
 function love.draw()
   -- draw border
   love.graphics.setColor(wallColor)
-  love.graphics.rectangle("fill", 10, 10, love.graphics:getWidth() - 20, 90)
-  love.graphics.rectangle("fill", 10, 110, love.graphics:getWidth() - 20, love.graphics:getHeight() - 120)
+  love.graphics.rectangle("fill", 10, 10, love.graphics:getWidth() - 20, 30)
+  love.graphics.rectangle("fill", 10, 10 + offset, love.graphics:getWidth() - 20, love.graphics:getHeight() - offset - 20)
   
-  love.graphics.setColor(backgroundColor)
-  
-  --love.graphics.print("Input text: " .. inputText, 10, 10)
-  --love.graphics.print("Snake length: " .. #snake[1].body, 10, 30)
-  --love.graphics.print("Highscore length: " .. #highscore, 150, 10)
-  
-  --for i = 1, #highscore do
-  --  love.graphics.print(highscore[i].score, love.graphics:getWidth()-170, i * 10)
-  --  love.graphics.print(highscore[i].name, love.graphics:getWidth()-150, i * 10)
-  --end
+  local width = 140
+  for i = 1, activeSnakes do
+    if snake[i].alive then
+      love.graphics.setColor(snake[i].color)
+    else
+      love.graphics.setColor(100, 100, 100)
+    end
+    love.graphics.rectangle("fill", 10 + 4 * i + width * (i - 1), 14, width, 22)
+    love.graphics.setColor(wallColor)
+    love.graphics.print("score:" .. snake[i].score, 13 + 4 * i + width * (i - 1), 20)
+  end
   
   -- render apples
   for i = 1, #apples do
     love.graphics.setColor(200, 55, 55)
-    love.graphics.rectangle("fill", apples[i].x * 10, 100 + apples[i].y * 10, 10, 10)
+    love.graphics.rectangle("fill", apples[i].x * 10, offset + apples[i].y * 10, 10, 10)
   end
   
   -- render snakes
+  for i = 1, activeSnakes do
+    love.graphics.setColor(snake[i].color)    
+    for j = 1, #snake[i].body do
+      love.graphics.rectangle("fill",
+        1 + snake[i].body[j].x * 10,
+        1 + offset + snake[i].body[j].y * 10,
+        8, 8)
+    end
+  end
+    
+  -- draw menu
+  if not gameIsRunning then drawMenu() end    
+  -- controlls
+  if showControls then drawControls() end
+  -- highscore
+  if showHighscore then drawHighscore() end
+  -- result after a game
+  if result >= 0 then drawEndGame() end
+end
+
+--[[
+]]--
+function drawEndGame()
+  --for i = 1, activeSnakes
+  for i = 1, 1 do
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
+    love.graphics.setColor(wallColor)
+    love.graphics.print("winner", 182, offset + 20 + 26 * (i - 1))
+  end
+end
+
+--[[
+]]--
+function drawMenu()
+  for i = 1, #buttons do
+    if buttons[i].pushed then
+      love.graphics.setColor(100, 100, 100)
+    elseif buttons[i].hover then
+      love.graphics.setColor(200, 200, 200)
+    else
+      love.graphics.setColor(255, 255, 255)
+    end
+    
+    love.graphics.rectangle("fill", buttons[i].pos.x, offset + buttons[i].pos.y, buttons[i].size.x, buttons[i].size.y)
+    
+    love.graphics.setColor(wallColor)
+    love.graphics.print(buttons[i].title, buttons[i].pos.x + 3, offset + buttons[i].pos.y + 6)
+  end
+end
+
+--[[
+]]--
+function drawHighscore()
+  for i = 1, 10 do
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
+    love.graphics.setColor(wallColor)
+    love.graphics.print("#"..i, 182, offset + 20 + 26 * (i - 1))
+  end
+  for i = 1, #highscore do
+    love.graphics.setColor(wallColor)
+    love.graphics.print("-" .. highscore[i].score, 230, offset + 20 + 26 * (i - 1))
+    love.graphics.print("-" .. highscore[i].name, 300, offset + 20 + 26 * (i - 1))
+  end
+end
+
+--[[
+]]--
+function drawControls()
+  local k = {"up:", "down:", "left:", "right:", "", "pause:", "exit:"}
+  
+  -- render backgrounds
+  love.graphics.setColor(255, 255, 255)
+  for i = 1, 7 do
+    love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
+  end
+  
+  -- render control text
+  love.graphics.setColor(wallColor)
+  for i = 1, #k do
+    love.graphics.printf(k[i], 220, offset + 20 + 26 * (i - 1), 100, "right")
+  end
+  
+  -- render general buttons
+  love.graphics.print("p", 350, offset + 20 + 26 * 5)
+  love.graphics.print("escape", 350, offset + 20 + 26 * 6)
+  
+  -- render snake control buttons
   for i = 1, #snake do
     love.graphics.setColor(snake[i].color)
-    
-    love.graphics.print("PLAYER:" .. i, 20 + 70 * (i - 1), 20)
-    love.graphics.print("SCORE:" .. #snake[i].body, 20 + 70 * (i - 1), 40)
-    
-    for j = 1, #snake[i].body do
-      love.graphics.rectangle(
-        "fill",
-        snake[i].body[j].x * 10,
-        100 + snake[i].body[j].y * 10,
-        10, 10)
+    for j = 1, 4 do
+      love.graphics.print(snake[i].keys[j], 300 + 50 * i, offset + 20 + 26 * (j - 1))
     end
   end
 end
