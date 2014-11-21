@@ -6,6 +6,8 @@ function love.load()
   backgroundColor = {255, 255, 255}
   love.graphics.setBackgroundColor(backgroundColor)
   love.graphics.setFont(love.graphics.newFont("Square One.ttf", 14))
+  love.graphics.setFont(love.graphics.newFont("asd.otf", 20))
+  love.graphics.setFont(love.graphics.newFont("pxlxxl.ttf", 36))
   
   -- set random seed to prevent apples from always
   -- starting at the same positions
@@ -42,6 +44,15 @@ function love.load()
   
   -- initiate menu buttons
   buttons = {
+    {title = "HIGHSCORE", pos = {x = 14, y = 14 + 26 * 0}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "CONTROLLS", pos = {x = 14, y = 14 + 26 * 1}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "1 PLAYER", pos = {x = 14, y = 14 + 26 * 2}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "2 PLAYER", pos = {x = 14, y = 14 + 26 * 3}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "3 PLAYER", pos = {x = 14, y = 14 + 26 * 4}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "4 PLAYER", pos = {x = 14, y = 14 + 26 * 5}, size = {x = 160, y = 22}, hover = false, pushed = false},
+    {title = "QUIT", pos = {x = 14, y = 14 + 26 * 6}, size = {x = 160, y = 22}, hover = false, pushed = false}
+  }
+  --[[buttons = {
     {title = "highscore", pos = {x = 14, y = 14 + 26 * 0}, size = {x = 160, y = 22}, hover = false, pushed = false},
     {title = "controls", pos = {x = 14, y = 14 + 26 * 1}, size = {x = 160, y = 22}, hover = false, pushed = false},
     {title = "1  player", pos = {x = 14, y = 14 + 26 * 2}, size = {x = 160, y = 22}, hover = false, pushed = false},
@@ -49,7 +60,7 @@ function love.load()
     {title = "3 player", pos = {x = 14, y = 14 + 26 * 4}, size = {x = 160, y = 22}, hover = false, pushed = false},
     {title = "4 player", pos = {x = 14, y = 14 + 26 * 5}, size = {x = 160, y = 22}, hover = false, pushed = false},
     {title = "quit", pos = {x = 14, y = 14 + 26 * 6}, size = {x = 160, y = 22}, hover = false, pushed = false}
-  }
+  }--]]
 end
 
 --[[
@@ -359,7 +370,7 @@ function love.draw()
     end
     love.graphics.rectangle("fill", 10 + 4 * i + width * (i - 1), 14, width, 22)
     love.graphics.setColor(wallColor)
-    love.graphics.print("score:" .. snake[i].score, 13 + 4 * i + width * (i - 1), 20)
+    love.graphics.print("SCORE:" .. snake[i].score, 13 + 4 * i + width * (i - 1), 14)
   end
   
   -- render apples
@@ -378,26 +389,40 @@ function love.draw()
         8, 8)
     end
   end
-    
+  
+  -- result after a game
+  if result >= 0 then drawEndGame() end
   -- draw menu
   if not gameIsRunning then drawMenu() end    
   -- controlls
   if showControls then drawControls() end
   -- highscore
   if showHighscore then drawHighscore() end
-  -- result after a game
-  if result >= 0 then drawEndGame() end
 end
 
 --[[
 ]]--
 function drawEndGame()
-  --for i = 1, activeSnakes
-  for i = 1, 1 do
+  -- three cases, either single player game then display score
+  -- or multiplayer where the result was a tie
+  -- or multiplayer where one player was the winner
+  if activeSnakes == 1 then
     love.graphics.setColor(255, 255, 255)
-    love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
+    love.graphics.rectangle("fill", 178, offset + 14, 408, 22)
     love.graphics.setColor(wallColor)
-    love.graphics.print("winner", 182, offset + 20 + 26 * (i - 1))
+    love.graphics.print("FINAL SCORE: " .. snake[1].score, 182, offset + 14)
+  elseif result == 0 then
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.rectangle("fill", 178, offset + 14, 408, 22)
+    love.graphics.setColor(wallColor)
+    love.graphics.print("THE GAME WAS A DRAW", 182, offset + 14)
+  else
+    love.graphics.setColor(255, 255, 255)
+    love.graphics.rectangle("fill", 178, offset + 14, 408, 22)
+    love.graphics.rectangle("fill", 178, offset + 14 + 26, 408, 22)
+    love.graphics.setColor(wallColor)
+    love.graphics.print("PLAYER " .. result .. " IS THE WINNER" , 182, offset + 14)
+    love.graphics.print("FINAL SCORE: " .. snake[result].score, 182, offset + 14 + 26)
   end
 end
 
@@ -416,7 +441,7 @@ function drawMenu()
     love.graphics.rectangle("fill", buttons[i].pos.x, offset + buttons[i].pos.y, buttons[i].size.x, buttons[i].size.y)
     
     love.graphics.setColor(wallColor)
-    love.graphics.print(buttons[i].title, buttons[i].pos.x + 3, offset + buttons[i].pos.y + 6)
+    love.graphics.print(buttons[i].title, buttons[i].pos.x + 3, offset + buttons[i].pos.y)-- + 6)
   end
 end
 
@@ -427,19 +452,19 @@ function drawHighscore()
     love.graphics.setColor(255, 255, 255)
     love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
     love.graphics.setColor(wallColor)
-    love.graphics.print("#"..i, 182, offset + 20 + 26 * (i - 1))
+    love.graphics.print("#"..i, 182, offset + 14 + 26 * (i - 1))
   end
   for i = 1, #highscore do
     love.graphics.setColor(wallColor)
-    love.graphics.print("-" .. highscore[i].score, 230, offset + 20 + 26 * (i - 1))
-    love.graphics.print("-" .. highscore[i].name, 300, offset + 20 + 26 * (i - 1))
+    love.graphics.print("-" .. highscore[i].score, 230, offset + 14 + 26 * (i - 1))
+    love.graphics.print("-" ..  string.upper(highscore[i].name), 300, offset + 14 + 26 * (i - 1))
   end
 end
 
 --[[
 ]]--
 function drawControls()
-  local k = {"up:", "down:", "left:", "right:", "", "pause:", "exit:"}
+  local k = {"UP", "DOWN", "LEFT", "RIGHT", "", "PAUSE", "EXIT"}
   
   -- render backgrounds
   love.graphics.setColor(255, 255, 255)
@@ -450,18 +475,20 @@ function drawControls()
   -- render control text
   love.graphics.setColor(wallColor)
   for i = 1, #k do
-    love.graphics.printf(k[i], 220, offset + 20 + 26 * (i - 1), 100, "right")
+    love.graphics.print(k[i], 182, offset + 14 + 26 * (i - 1))
+    love.graphics.print("-", 240, offset + 14 + 26 * (i - 1))
   end
   
   -- render general buttons
-  love.graphics.print("p", 350, offset + 20 + 26 * 5)
-  love.graphics.print("escape", 350, offset + 20 + 26 * 6)
+  love.graphics.print("P", 260, offset + 14 + 130)
+  love.graphics.print("ESCAPE", 260, offset + 14 + 156)
   
   -- render snake control buttons
-  for i = 1, #snake do
+  for i = 1, 4 do
     love.graphics.setColor(snake[i].color)
-    for j = 1, 4 do
-      love.graphics.print(snake[i].keys[j], 300 + 50 * i, offset + 20 + 26 * (j - 1))
-    end
+    love.graphics.print(string.upper(snake[i].keys[1]), 210 + 50 * i, offset + 14)
+    love.graphics.print(string.upper(snake[i].keys[2]), 210 + 50 * i, offset + 14 + 26)
+    love.graphics.print(string.upper(snake[i].keys[3]), 210 + 50 * i, offset + 14 + 52)
+    love.graphics.print(string.upper(snake[i].keys[4]), 210 + 50 * i, offset + 14 + 78)
   end
 end
