@@ -5,8 +5,6 @@ function love.load()
   wallColor = {30, 30, 30}
   backgroundColor = {255, 255, 255}
   love.graphics.setBackgroundColor(backgroundColor)
-  love.graphics.setFont(love.graphics.newFont("Square One.ttf", 14))
-  love.graphics.setFont(love.graphics.newFont("asd.otf", 20))
   love.graphics.setFont(love.graphics.newFont("pxlxxl.ttf", 36))
   
   -- set random seed to prevent apples from always
@@ -52,15 +50,6 @@ function love.load()
     {title = "4 PLAYER", pos = {x = 14, y = 14 + 26 * 5}, size = {x = 160, y = 22}, hover = false, pushed = false},
     {title = "QUIT", pos = {x = 14, y = 14 + 26 * 6}, size = {x = 160, y = 22}, hover = false, pushed = false}
   }
-  --[[buttons = {
-    {title = "highscore", pos = {x = 14, y = 14 + 26 * 0}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "controls", pos = {x = 14, y = 14 + 26 * 1}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "1  player", pos = {x = 14, y = 14 + 26 * 2}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "2 player", pos = {x = 14, y = 14 + 26 * 3}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "3 player", pos = {x = 14, y = 14 + 26 * 4}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "4 player", pos = {x = 14, y = 14 + 26 * 5}, size = {x = 160, y = 22}, hover = false, pushed = false},
-    {title = "quit", pos = {x = 14, y = 14 + 26 * 6}, size = {x = 160, y = 22}, hover = false, pushed = false}
-  }--]]
 end
 
 --[[
@@ -142,9 +131,8 @@ end
   Initiate a snake by creating its body
 ]]--
 function setupSnake(snake, l)
-  snake.body = {}
-  if l == nil or l == 0 then l = 1 end  
-  
+  snake.body = {} -- reset body  
+  snake.score = 0
   snake.alive = true
   snake.direction = snake.startDirection  
   -- tmpDirection prevents turning to fast creating a 180 degree
@@ -159,11 +147,11 @@ function setupSnake(snake, l)
 end
 
 --[[
-  Save highs core to file
+  Save highscore to file
 ]]--
-function saveHighscore()
+function saveHighscore(snakeIndex)
   -- insert the new highscore and sort the list
-  table.insert(highscore, {name = inputText, score = math.random(100)})
+  table.insert(highscore, {name = inputText, score = snake[snakeIndex].score})
   table.sort(highscore, compare)
   
   -- only keep a maximum of 10 entries in the highscore table
@@ -192,16 +180,12 @@ end
 function love.keypressed(key)
   if key == "escape" then love.event.quit() end
   if key == "backspace" then inputText = string.sub(inputText, 1, -2) end
-
-  -- pause game
-  if key == "p" then
-    gameIsRunning = not gameIsRunning
-    timer = 0
+  if key == "return" and enterText then
+    enterText = false
+    saveHighscore(result)
+    inputText = ""
   end
-
-  --if key == "t" then enterText =  not enterText end
-  --if not enterText and key == "g" then saveHighscore() end
-
+  
   -- user input for controlling the snake
   if not enterText and gameIsRunning then
     for i = 1, #snake do
@@ -213,25 +197,37 @@ function love.keypressed(key)
   end
 end
 
+--[[
+]]--
 function love.mousereleased( x, y, button )
+  -- only check if the game is not currently running
   if not gameIsRunning then
     y = y - offset
     
+    -- check if button have been pressed
+    -- only register when the button is realeased
+    -- then do some action
     for i = 1, #buttons do
       if x > buttons[i].pos.x and x < buttons[i].pos.x + buttons[i].size.x and y > buttons[i].pos.y and y < buttons[i].pos.y + buttons[i].size.y then
         if i == 1 then
           result = -1
           showHighscore = true
           showControls = false
+          enterText = false
+          inputText = ""
         elseif i == 2 then
           result = -1
           showHighscore = false
           showControls = true
+          enterText = false
+          inputText = ""
         elseif i == 3 or i == 4 or i == 5 or i == 6 then
           result = -1
           showHighscore = false
           showControls = false
           gameIsRunning = true
+          enterText = false
+          inputText = ""
           activeSnakes = i - 2
           initiateWorld()
           timer = 0
@@ -348,6 +344,15 @@ function love.update(dt)
           if snake[i].alive then result = i end
         end
       end
+      
+      -- if one snake won the game and had a score higher than 0
+      if result >= 1 and snake[result].score > 0 then
+        -- if there are less than 10 entries in the highscore or the
+        -- winner had a higher score than at least one entry in the highscore list
+        if #highscore < 10 or snake[result].score > highscore[#highscore].score then
+          enterText = true
+        end
+      end
     end
   end
 end
@@ -402,15 +407,32 @@ end
 
 --[[
 ]]--
+function drawInputText(offsetY)
+  love.graphics.setColor(255, 255, 255)
+  love.graphics.rectangle("fill", 178, offset + 14 + offsetY, 408, 22)
+  love.graphics.rectangle("fill", 178, offset + 14 + 26 + offsetY, 408, 22)
+  love.graphics.rectangle("fill", 178, offset + 14 + 52 + offsetY, 408, 22)
+  love.graphics.rectangle("fill", 178, offset + 14 + 78 + offsetY, 408, 22)
+  love.graphics.setColor(wallColor)
+  love.graphics.print("TYPE A NAME AND PRESS ENTER TO ENTER", 182, offset + 14 + 26 + offsetY)
+  love.graphics.print("THE SCORE INTO THE HIGHSCORE LIST", 182, offset + 14 + 52 + offsetY)
+  love.graphics.print("NAME: " .. inputText, 182, offset + 14 + 78 + offsetY)
+end
+
+--[[
+]]--
 function drawEndGame()
   -- three cases, either single player game then display score
   -- or multiplayer where the result was a tie
   -- or multiplayer where one player was the winner
+  local offsetY = 0
+  
   if activeSnakes == 1 then
     love.graphics.setColor(255, 255, 255)
     love.graphics.rectangle("fill", 178, offset + 14, 408, 22)
     love.graphics.setColor(wallColor)
     love.graphics.print("FINAL SCORE: " .. snake[1].score, 182, offset + 14)
+    offsetY = 1
   elseif result == 0 then
     love.graphics.setColor(255, 255, 255)
     love.graphics.rectangle("fill", 178, offset + 14, 408, 22)
@@ -423,7 +445,10 @@ function drawEndGame()
     love.graphics.setColor(wallColor)
     love.graphics.print("PLAYER " .. result .. " IS THE WINNER" , 182, offset + 14)
     love.graphics.print("FINAL SCORE: " .. snake[result].score, 182, offset + 14 + 26)
+    offsetY = 2
   end
+  
+  if enterText then drawInputText(offsetY * 26) end
 end
 
 --[[
@@ -456,19 +481,19 @@ function drawHighscore()
   end
   for i = 1, #highscore do
     love.graphics.setColor(wallColor)
-    love.graphics.print("-" .. highscore[i].score, 230, offset + 14 + 26 * (i - 1))
-    love.graphics.print("-" ..  string.upper(highscore[i].name), 300, offset + 14 + 26 * (i - 1))
+    love.graphics.print(": " .. highscore[i].score, 230, offset + 14 + 26 * (i - 1))
+    love.graphics.print(": " ..  string.upper(highscore[i].name), 300, offset + 14 + 26 * (i - 1))
   end
 end
 
 --[[
 ]]--
 function drawControls()
-  local k = {"UP", "DOWN", "LEFT", "RIGHT", "", "PAUSE", "EXIT"}
+  local k = {"UP", "DOWN", "LEFT", "RIGHT", "", "EXIT"}
   
   -- render backgrounds
   love.graphics.setColor(255, 255, 255)
-  for i = 1, 7 do
+  for i = 1, 6 do
     love.graphics.rectangle("fill", 178, offset + 14 + (i - 1) * 26, 408, 22)
   end
   
@@ -480,8 +505,7 @@ function drawControls()
   end
   
   -- render general buttons
-  love.graphics.print("P", 260, offset + 14 + 130)
-  love.graphics.print("ESCAPE", 260, offset + 14 + 156)
+  love.graphics.print("ESCAPE", 260, offset + 14 + 130)
   
   -- render snake control buttons
   for i = 1, 4 do
