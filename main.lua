@@ -79,7 +79,8 @@ function love.quit()
   
   s = s .. "\n}\nreturn highscore"
 
-  -- save Lua table to file
+  -- save Lua table to file, file will be saved inside 
+  -- C:\Users\user\AppData\Roaming\LOVE\LuaSnake
   love.filesystem.write( "highscore.lua", s)
 end
 
