@@ -1,0 +1,3 @@
+local highscore = {
+}
+return highscore
