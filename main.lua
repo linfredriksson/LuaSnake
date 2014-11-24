@@ -2,7 +2,7 @@
 require "gui"
 
 --[[
-  Load function initiating the game and all global functions
+  Load function initiating the game and all global variables.
 ]]--
 function love.load()
   gameColor1 = {255, 255, 255} -- walls and buttons
@@ -21,7 +21,6 @@ function love.load()
   showControls = false
   gameIsRunning = false
   result = -1       -- 0 = tie game, bigger than 0 indicates id of player with highest score regardless of game type
-  timer = 0         -- accumulates time, then when bigger than a number x update snakes
   enterText = false -- true while players can enter their name for the highscore
   inputText = ""    -- used when players enter their name into the highscore
   defaultLength = 5 -- start length of snakes
@@ -45,7 +44,7 @@ function love.load()
     {color = {255, 155, 100}, start = {x = 20, y = 10}, startDirection = {x =1, y = 0}, keys = {"up", "down", "left", "right"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true}
   }
   
-  -- initiate speed
+  -- initiate speed of snakes
   speed = {
     {current = 0.1, base = 0.1, cooldown = 0, timer = 0},
     {current = 0.1, base = 0.1, cooldown = 0, timer = 0},
@@ -85,21 +84,23 @@ function love.quit()
 end
 
 --[[
-  Helper function used to compare two positions
+  Helper function used to compare two positions.
+  a and b are two positions stored as follows {x = 0, y = 0}
 ]]--
 function equal(a, b)
   return a.x == b.x and a.y == b.y
 end
 
 --[[
-  Helper function used when sorting the high score table
+  Helper function used when sorting the high score table.
+  a and b are two numbers.
 ]]--
 function compare(a, b)
   return a.score > b.score
 end
 
 --[[
-  Initiate snakes and power-up before starting a new game
+  Initiate snakes and power-up before starting a new game.
 ]]--
 function initiateWorld()
   for i = 1, activeSnakes do
@@ -113,7 +114,10 @@ end
 
 --[[
   Function used to generate n number of power ups at random
-  positions inside the game world
+  positions inside the game world.
+  n is the number of power ups, color1 is the display color,
+  speed1 can be used to change the speed of the snake, and
+  grow1 can be used to add grow1 number of body parts to a snake.
 ]]--
 function generatePowerUp(n, color1, speed1, grow1)
   local occupied = false
@@ -160,7 +164,7 @@ end
 
 --[[
   Initiate a snake by creating its body. Function takes a snake
-  and the length of its body when the game starts
+  and the length of its body when the game starts.
 ]]--
 function setupSnake(snake, speed, l)
   -- reset the snake body and variables
@@ -187,7 +191,7 @@ end
 --[[
   Save score to high score table. Function takes the index
   of the snake with the score high enough to enter the
-  high score table
+  high score table.
 ]]--
 function saveHighscore(snakeIndex)
   -- insert the new high score and sort the list
@@ -199,7 +203,7 @@ function saveHighscore(snakeIndex)
 end
 
 --[[
-  Load high score table from file
+  Load high score table from file.
 ]]--
 function loadHighscore()
   if love.filesystem.exists("highscore.lua") then
@@ -217,7 +221,7 @@ function love.textinput(t)
 end
 
 --[[
-  Handles pressed keys
+  Handles pressed keys.
 ]]--
 function love.keypressed(key)
   if key == "escape" then
@@ -237,7 +241,7 @@ end
 
 --[[
   Function is called whenever a mouse button is released and is
-  used to activate the menu buttons when they have been clicked
+  used to activate the menu buttons when they have been clicked.
 ]]--
 function love.mousereleased(x, y, button)
   -- only check if the game is not currently running
@@ -271,7 +275,6 @@ function love.mousereleased(x, y, button)
           enterText = false
           activeSnakes = i - 2
           initiateWorld()
-          timer = 0
         
         -- quit game
         else
@@ -283,11 +286,9 @@ function love.mousereleased(x, y, button)
 end
 
 --[[
-  Main game loop, updates the game progression
+  Main game loop, updates the game progression.
 ]]--
 function love.update(dt)
-  timer = timer + dt
-  
   -- if a game is not currently in progress then check to
   -- see if mouse is hovering over a button and sets
   -- pushed/hover to true and false, this is then used when
@@ -438,7 +439,7 @@ function love.update(dt)
 end
 
 --[[
-  Draw function
+  Draw function.
 ]]--
 function love.draw()
   -- draw walls and background

@@ -1,6 +1,6 @@
 --[[
   Function draws the games main menu containing options to
-  display highscore, controls, start new games or quit the game
+  display highscore, controls, start new games or quit the game.
 ]]--
 function drawMenu()
   for i = 1, #buttons do
@@ -24,7 +24,7 @@ function drawMenu()
 end
 
 --[[
-  Function draws the highscore table containing the top 10 results
+  Function draws the highscore table containing the top 10 results.
 ]]--
 function drawHighscore()
   -- draw backgrounds and numbering for 10 entries
@@ -45,7 +45,7 @@ end
 
 --[[
   Function displays the controls in the game, the controls to steer
-  the snakes and to quit the game
+  the snakes and to quit the game.
 ]]--
 function drawControls()
   local k = {"UP", "DOWN", "LEFT", "RIGHT", "", "EXIT"}
@@ -77,12 +77,10 @@ end
 
 --[[
   The function displays the result of a game, the function is used
-  for all results for both single player game and multiplayer games
+  for all results for both single player game and multiplayer games.
   
-  There are three cases for a end game
-  - Single player
-  - Multiplayer with a tie game
-  - Multiplayer with a winner
+  There are three cases for a end game. Single player, Multiplayer with
+  a tie game, Multiplayer with a winner.
 ]]--
 function drawEndGame()
   local offsetY = 0
@@ -119,8 +117,11 @@ end
 
 --[[
   Function displays the means for a user to insert a name to enter the
-  highscore table if the winners score was higher than atleas one other
-  entry in the highscore table
+  highscore table if the winners score was higher than at least one other
+  entry in the highscore table.
+  
+  offsetY is a offset depending on how many lines of text will be displayed
+  before these elements.
 ]]--
 function drawInputText(offsetY)
   -- draw backgrounds
