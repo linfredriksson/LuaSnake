@@ -12,7 +12,7 @@ function love.load()
   -- font used for all text in the gui
   love.graphics.setFont(love.graphics.newFont("pxlxxl.ttf", 36))
   
-  -- set random seed to prevent apples from always
+  -- set random seed to prevent power ups from always
   -- starting at the same positions
   math.randomseed(os.time())
   
@@ -34,8 +34,8 @@ function love.load()
   highscore = {}
   loadHighscore()
   
-  -- initiate apples
-  apples = {}
+  -- initiate power-up
+  powerUp = {}
   
   -- initiate snakes
   snake = {
@@ -43,6 +43,14 @@ function love.load()
     {color = {10, 255, 10}, start = {x = 38, y = 10}, startDirection = {x =-1, y = 0}, keys = {"i", "k", "j", "l"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
     {color = {10, 10, 255}, start = {x = 38, y = 18}, startDirection = {x =-1, y = 0}, keys = {"t", "g", "f", "h"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true},
     {color = {255, 155, 100}, start = {x = 20, y = 10}, startDirection = {x =1, y = 0}, keys = {"up", "down", "left", "right"}, score = 0, body = {}, direction = {}, tmpDirection={}, alive = true}
+  }
+  
+  -- initiate speed
+  speed = {
+    {current = 0.1, base = 0.1, cooldown = 0, timer = 0},
+    {current = 0.1, base = 0.1, cooldown = 0, timer = 0},
+    {current = 0.1, base = 0.1, cooldown = 0, timer = 0},
+    {current = 0.1, base = 0.1, cooldown = 0, timer = 0}
   }
   
   -- initiate menu buttons
@@ -91,33 +99,34 @@ function compare(a, b)
 end
 
 --[[
-  Initiate snakes and apples before starting a new game
+  Initiate snakes and power-up before starting a new game
 ]]--
 function initiateWorld()
   for i = 1, activeSnakes do
-    setupSnake(snake[i], defaultLength)
+    setupSnake(snake[i], speed[i], defaultLength)
   end
 
-  apples = {}
-  generateApples(5)
+  powerUp = {}
+  generatePowerUp(4, {200, 55, 55}, 0, 1)
+  generatePowerUp(2, {55, 200, 55}, 0.05, 0)
 end
 
 --[[
-  Function used to generate n number of apples at random
+  Function used to generate n number of power ups at random
   positions inside the game world
 ]]--
-function generateApples(n)
+function generatePowerUp(n, color1, speed1, grow1)
   local occupied = false
-  local pos
+  local pos1
 
-  -- generate n apples
+  -- generate n power ups
   for i = 1, n do
     -- give it 20 tries to find a empty spot before
     -- taking whatever position is current even if
     -- it will be on top of a snake
     while i < 20 do
       -- find a random position in the game world
-      pos = {
+      pos1 = {
         x = math.random(worldWidth),
         y = math.random(worldHeight)
       }
@@ -125,16 +134,16 @@ function generateApples(n)
       -- check if pos is occupied by one of the snakes
       for j = 1, activeSnakes do
         for k = 1, #snake[j].body do
-          if equal(pos, snake[j].body[k]) then
+          if equal(pos1, snake[j].body[k]) then
             occupied = true
             break
           end
         end
       end
       
-      -- check if pos is occupied by another apple
-      for j = 1, #apples do
-        if equal(pos, apples[j]) then
+      -- check if pos is occupied by another power up
+      for j = 1, #powerUp do
+        if equal(pos1, powerUp[j].pos) then
           occupied = true
           break
         end
@@ -144,7 +153,8 @@ function generateApples(n)
       if not occupied then break end
     end
     
-    table.insert(apples, pos)
+    obj = {color = color1, pos = pos1, speed = speed1, grow = grow1}
+    table.insert(powerUp, obj)
   end
 end
 
@@ -152,7 +162,7 @@ end
   Initiate a snake by creating its body. Function takes a snake
   and the length of its body when the game starts
 ]]--
-function setupSnake(snake, l)
+function setupSnake(snake, speed, l)
   -- reset the snake body and variables
   snake.body = {}
   snake.score = 0
@@ -161,6 +171,10 @@ function setupSnake(snake, l)
   -- tmpDirection prevents turning to fast creating a 180 degree
   -- turn where the snake can go back inside itself
   snake.tmpDirection = snake.startDirection
+  
+  speed.current = speed.base
+  speed.cooldown = 0
+  speed.timer = 0
   
   -- create snake body
   for i = 1, l do
@@ -311,11 +325,20 @@ function love.update(dt)
       end
     end
     
-    -- update snake positions when timer > 0.1
-    if timer > 0.1 then
-      timer = timer - 0.1
+    for i = 1, activeSnakes do
+      speed[i].timer = speed[i].timer + dt
       
-      for i = 1, activeSnakes do
+      -- check to see if snake have eaten a power up
+      -- then slowly count it down until it stops working
+      if speed[i].cooldown > 0 then
+        speed[i].cooldown = speed[i].cooldown - dt
+      elseif speed[i].cooldown < 0 then
+        speed[i].current = speed[i].base
+        speed[i].cooldown = 0
+      end
+      
+      if speed[i].timer > speed[i].current then
+        speed[i].timer = speed[i].timer - speed[i].current
         -- do not update a dead snake
         if snake[i].alive == true then
           snake[i].direction = snake[i].tmpDirection
@@ -325,16 +348,25 @@ function love.update(dt)
             x = snake[i].body[1].x + snake[i].direction.x,
             y = snake[i].body[1].y + snake[i].direction.y}
           
-          -- check to see if snake eats a apple
-          for j = 1, #apples do
-            if equal(snake[i].body[1], apples[j]) then
+          -- check to see if snake eats a power up
+          for j = 1, #powerUp do
+            if equal(snake[i].body[1], powerUp[j].pos) then
               -- add body part to snake and add points
-              table.insert(snake[i].body, 1, apples[j])
-              snake[i].score = snake[i].score + 1
+              for k = 1, powerUp[j].grow do
+                table.insert(snake[i].body, 1, powerUp[j].pos)
+                snake[i].score = snake[i].score + 1
+              end
               
-              -- remove apple and generate a new one
-              table.remove(apples, j)              
-              generateApples(1)
+              -- change snake speed if necessary
+              if powerUp[j].speed > 0 then
+                speed[i].current = powerUp[j].speed
+                speed[i].cooldown = 2
+              end
+              
+              -- remove power up and generate a new one
+              local p = powerUp[j]
+              table.remove(powerUp, j)
+              generatePowerUp(1, p.color, p.speed, p.grow)
               
               break
             end
@@ -345,61 +377,61 @@ function love.update(dt)
           table.insert(snake[i].body, 1, pos)
         end
       end
+    end
+    
+    -- check for collisions
+    for i = 1, activeSnakes do
+      local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
       
-      -- check for collisions
-      for i = 1, activeSnakes do
-        local pos = {x = snake[i].body[1].x, y = snake[i].body[1].y}
-        
-        -- check if snake hits any walls
-        if pos.x < 1 or pos.x > worldWidth or pos.y < 1 or pos.y > worldHeight then
-          snake[i].alive = false
-        end
-        
-        -- check if snake hits any part of any snake
-        for j = 1, activeSnakes do
-          for k = 1, #snake[j].body do
-            -- no intersection with snakes own head
-            if equal(pos, snake[j].body[k]) and not (i == j and k == 1) then
-              snake[i].alive = false
-              break
-            end
+      -- check if snake hits any walls
+      if pos.x < 1 or pos.x > worldWidth or pos.y < 1 or pos.y > worldHeight then
+        snake[i].alive = false
+      end
+      
+      -- check if snake hits any part of any snake
+      for j = 1, activeSnakes do
+        for k = 1, #snake[j].body do
+          -- no intersection with snakes own head
+          if equal(pos, snake[j].body[k]) and not (i == j and k == 1) then
+            snake[i].alive = false
+            break
           end
         end
       end
-      
-      -- check how many snakes is still alive
-      local count = 0
+    end
+    
+    -- check how many snakes is still alive
+    local count = 0
+    for i = 1, activeSnakes do
+      if snake[i].alive == true then count = count + 1 end
+    end
+    
+    -- if single player and no snake alive
+    if activeSnakes == 1 and count == 0 then
+      gameIsRunning = false
+      result = 1
+    end
+    
+    -- if multiplayer with no surviving snakes
+    if activeSnakes > 1 and count == 0 then
+      gameIsRunning = false
+      result = 0
+    end
+    
+    -- if multiplayer with one surviving snake
+    if activeSnakes > 1 and count == 1 then
+      gameIsRunning = false
       for i = 1, activeSnakes do
-        if snake[i].alive == true then count = count + 1 end
+        if snake[i].alive then result = i end
       end
-      
-      -- if single player and no snake alive
-      if activeSnakes == 1 and count == 0 then
-        gameIsRunning = false
-        result = 1
-      end
-      
-      -- if multiplayer with no surviving snakes
-      if activeSnakes > 1 and count == 0 then
-        gameIsRunning = false
-        result = 0
-      end
-      
-      -- if multiplayer with one surviving snake
-      if activeSnakes > 1 and count == 1 then
-        gameIsRunning = false
-        for i = 1, activeSnakes do
-          if snake[i].alive then result = i end
-        end
-      end
-      
-      -- if one snake won the game and had a score higher than 0
-      if result >= 1 and snake[result].score > 0 then
-        -- if there are less than 10 entries in the high score or the
-        -- winner had a higher score than at least one entry in the high score list
-        if #highscore < 10 or snake[result].score > highscore[#highscore].score then
-          enterText = true
-        end
+    end
+    
+    -- if one snake won the game and had a score higher than 0
+    if result >= 1 and snake[result].score > 0 then
+      -- if there are less than 10 entries in the high score or the
+      -- winner had a higher score than at least one entry in the high score list
+      if #highscore < 10 or snake[result].score > highscore[#highscore].score then
+        enterText = true
       end
     end
   end
@@ -426,10 +458,10 @@ function love.draw()
     love.graphics.print("SCORE:" .. snake[i].score, 13 + 4 * i + 140 * (i - 1), 14)
   end
   
-  -- draw apples
-  for i = 1, #apples do
-    love.graphics.setColor(200, 55, 55)
-    love.graphics.rectangle("fill", apples[i].x * 10, offset + apples[i].y * 10, 10, 10)
+  -- draw power up
+  for i = 1, #powerUp do
+    love.graphics.setColor(powerUp[i].color)
+    love.graphics.rectangle("fill", powerUp[i].pos.x * 10, offset + powerUp[i].pos.y * 10, 10, 10)
   end
   
   -- draw snakes
